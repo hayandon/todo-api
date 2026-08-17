@@ -17,6 +17,10 @@ class Task(BaseModel):
 class TaskCreate(BaseModel):
     title: Optional[str] = None
 
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    done: Optional[bool] = None
+
 tasks = [
     Task(id=1, title="Buy milk", done=False),
     Task(id=2, title="Walk the dog", done=False),
@@ -57,3 +61,24 @@ def create_task(task: TaskCreate):
     tasks.append(new_task)
     next_id += 1
     return new_task
+
+@app.put("/tasks/{task_id}")
+def update_task(task_id: int, update: TaskUpdate):
+    for t in tasks:
+        if t.id == task_id:
+            if update.title is not None:
+                if not update.title.strip():
+                    raise HTTPException(status_code=400, detail="title cannot be empty")
+                t.title = update.title
+            if update.done is not None:
+                t.done = update.done
+            return t
+    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+
+@app.delete("/tasks/{task_id}", status_code=204)
+def delete_task(task_id: int):
+    for t in tasks:
+        if t.id == task_id:
+            tasks.remove(t)
+            return
+    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
