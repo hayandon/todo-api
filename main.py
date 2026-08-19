@@ -8,7 +8,7 @@ DB_FILE = "tasks.db"
 
 def get_connection():
     conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row  
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
@@ -53,12 +53,12 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
 
+# Temporary in-memory list — still used by POST/PUT/DELETE until Stage 2 & 3
 tasks = [
     Task(id=1, title="Buy milk", done=False),
     Task(id=2, title="Walk the dog", done=False),
     Task(id=3, title="Finish assignment", done=True),
 ]
-
 next_id = 4
 
 @app.get("/")
@@ -73,18 +73,27 @@ def root():
 def health():
     return {"status": "ok"}
 
-@app.get("/tasks")
+@app.get("/tasks", summary="List all tasks")
 def get_tasks():
-    return tasks
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, done FROM tasks")
+    rows = cursor.fetchall()
+    conn.close()
+    return [Task(id=row["id"], title=row["title"], done=bool(row["done"])) for row in rows]
 
-@app.get("/tasks/{task_id}")
+@app.get("/tasks/{task_id}", summary="Get a single task by id")
 def get_task(task_id: int):
-    for t in tasks:
-        if t.id == task_id:
-            return t
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, done FROM tasks WHERE id = ?", (task_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return Task(id=row["id"], title=row["title"], done=bool(row["done"]))
 
-@app.post("/tasks", status_code=201)
+@app.post("/tasks", status_code=201, summary="Create a new task")
 def create_task(task: TaskCreate):
     global next_id
     if not task.title or not task.title.strip():
@@ -94,7 +103,7 @@ def create_task(task: TaskCreate):
     next_id += 1
     return new_task
 
-@app.put("/tasks/{task_id}")
+@app.put("/tasks/{task_id}", summary="Update a task")
 def update_task(task_id: int, update: TaskUpdate):
     for t in tasks:
         if t.id == task_id:
@@ -107,7 +116,7 @@ def update_task(task_id: int, update: TaskUpdate):
             return t
     raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
 
-@app.delete("/tasks/{task_id}", status_code=204)
+@app.delete("/tasks/{task_id}", status_code=204, summary="Delete a task")
 def delete_task(task_id: int):
     for t in tasks:
         if t.id == task_id:
