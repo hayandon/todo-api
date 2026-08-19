@@ -59,7 +59,7 @@ tasks = [
     Task(id=2, title="Walk the dog", done=False),
     Task(id=3, title="Finish assignment", done=True),
 ]
-next_id = 4
+
 
 @app.get("/")
 def root():
@@ -95,13 +95,17 @@ def get_task(task_id: int):
 
 @app.post("/tasks", status_code=201, summary="Create a new task")
 def create_task(task: TaskCreate):
-    global next_id
     if not task.title or not task.title.strip():
         raise HTTPException(status_code=400, detail="title is required")
-    new_task = Task(id=next_id, title=task.title, done=False)
-    tasks.append(new_task)
-    next_id += 1
-    return new_task
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", (task.title, 0))
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+
+    return Task(id=new_id, title=task.title, done=False)
 
 @app.put("/tasks/{task_id}", summary="Update a task")
 def update_task(task_id: int, update: TaskUpdate):
