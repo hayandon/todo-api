@@ -1,11 +1,11 @@
-from typing import Optional
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
 import os
+from typing import Optional
 from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 load_dotenv()
 
@@ -39,7 +39,6 @@ def init_db():
 
 init_db()
 
-
 app = FastAPI()
 
 @app.exception_handler(HTTPException)
@@ -57,9 +56,6 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
-
-
-
 
 @app.get("/")
 def root():
@@ -80,18 +76,18 @@ def get_tasks():
     cursor.execute("SELECT id, title, done FROM tasks")
     rows = cursor.fetchall()
     conn.close()
-    return [Task(id=row["id"], title=row["title"], done=bool(row["done"])) for row in rows]
+    return [Task(id=row["id"], title=row["title"], done=row["done"]) for row in rows]
 
 @app.get("/tasks/{task_id}", summary="Get a single task by id")
 def get_task(task_id: int):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, done FROM tasks WHERE id = ?", (task_id,))
+    cursor.execute("SELECT id, title, done FROM tasks WHERE id = %s", (task_id,))
     row = cursor.fetchone()
     conn.close()
     if row is None:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    return Task(id=row["id"], title=row["title"], done=bool(row["done"]))
+    return Task(id=row["id"], title=row["title"], done=row["done"])
 
 @app.post("/tasks", status_code=201, summary="Create a new task")
 def create_task(task: TaskCreate):
@@ -100,9 +96,12 @@ def create_task(task: TaskCreate):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO tasks (title, done) VALUES (?, ?)", (task.title, 0))
+    cursor.execute(
+        "INSERT INTO tasks (title, done) VALUES (%s, %s) RETURNING id",
+        (task.title, False)
+    )
+    new_id = cursor.fetchone()["id"]
     conn.commit()
-    new_id = cursor.lastrowid
     conn.close()
 
     return Task(id=new_id, title=task.title, done=False)
@@ -112,7 +111,7 @@ def update_task(task_id: int, update: TaskUpdate):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id, title, done FROM tasks WHERE id = ?", (task_id,))
+    cursor.execute("SELECT id, title, done FROM tasks WHERE id = %s", (task_id,))
     row = cursor.fetchone()
     if row is None:
         conn.close()
@@ -128,29 +127,29 @@ def update_task(task_id: int, update: TaskUpdate):
         new_title = update.title
 
     if update.done is not None:
-        new_done = 1 if update.done else 0
+        new_done = update.done
 
     cursor.execute(
-        "UPDATE tasks SET title = ?, done = ? WHERE id = ?",
+        "UPDATE tasks SET title = %s, done = %s WHERE id = %s",
         (new_title, new_done, task_id)
     )
     conn.commit()
     conn.close()
 
-    return Task(id=task_id, title=new_title, done=bool(new_done))
+    return Task(id=task_id, title=new_title, done=new_done)
 
 @app.delete("/tasks/{task_id}", status_code=204, summary="Delete a task")
 def delete_task(task_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+    cursor.execute("SELECT id FROM tasks WHERE id = %s", (task_id,))
     row = cursor.fetchone()
     if row is None:
         conn.close()
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
 
-    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    cursor.execute("DELETE FROM tasks WHERE id = %s", (task_id,))
     conn.commit()
     conn.close()
     return
