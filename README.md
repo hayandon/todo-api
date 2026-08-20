@@ -42,3 +42,8 @@ curl -i http://localhost:8000/tasks
 
 - Built stage by stage, with a commit after each stage — see commit history for progress from "hello server" to full CRUD.
 - Status codes follow REST conventions: `201` for created, `200` for success, `204` for deleted with no content, `400` for bad input, `404` for not found.
+## Running Postgres (Docker)
+
+This project now uses Postgres instead of SQLite. Start it with:
+
+This runs Postgres 16 in a container named `taskdb`, with a named volume (`taskdata`) so data survives container restarts.
