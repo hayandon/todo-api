@@ -60,42 +60,7 @@ This returns only completed tasks — and the API reflects the change instantly,
 - All queries use parameterized statements (`?` placeholders) to avoid SQL injection.
 - Status codes follow REST conventions: `201` created, `200` success, `204` deleted with no content, `400` bad input, `404` not found.
 - Built stage by stage with a commit after each — see commit history for the full progression from in-memory storage to SQLite.
-## How to run
 
-1. Clone this repo and `cd` into it
-2. Create a virtual environment: `python -m venv venv`
-3. Activate it:
-   - Windows: `.\venv\Scripts\Activate.ps1`
-   - Mac/Linux: `source venv/bin/activate`
-4. Install dependencies: `pip install fastapi uvicorn`
-5. Start the server: `uvicorn main:app --reload`
-6. Visit `http://localhost:8000/docs` for interactive Swagger UI
-
-## Endpoints
-
-| Method | Endpoint         | Meaning                          |
-|--------|------------------|-----------------------------------|
-| GET    | `/`              | API info                          |
-| GET    | `/health`        | Health check                      |
-| GET    | `/tasks`         | List all tasks                    |
-| GET    | `/tasks/{id}`    | Get a single task                 |
-| POST   | `/tasks`         | Create a new task                 |
-| PUT    | `/tasks/{id}`    | Update a task's title and/or done status |
-| DELETE | `/tasks/{id}`    | Delete a task                     |
-
-## Example request
-
-```
-curl -i http://localhost:8000/tasks
-```
-## Swagger UI
-
-![Swagger UI showing all endpoints](swagger-screenshot.png)
-
-## Notes
-
-- Built stage by stage, with a commit after each stage — see commit history for progress from "hello server" to full CRUD.
-- Status codes follow REST conventions: `201` for created, `200` for success, `204` for deleted with no content, `400` for bad input, `404` for not found.
 ## Running Postgres (Docker)
 
 This project now uses Postgres instead of SQLite. Start it with:
@@ -176,31 +141,4 @@ Visit `/docs` — protected routes show a padlock icon. Click **Authorize**, pas
 2. Create a virtual environment and install dependencies:
 3. Copy `.env.example` to `.env` and fill in your values
 4. Run:
-
-## Authentication (Supabase)
-
-This API uses Supabase Auth for user accounts. Supabase handles password hashing and JWT signing — this server only ever receives and verifies tokens, never handling raw passwords itself.
-
-
-
-## Swagger UI
-
-Visit `/docs` — protected routes show a padlock icon. Click **Authorize**, paste a JWT from `/auth/login`, and test any protected route directly from the browser.
-
-![Swagger UI with bearer auth](swagger-auth-screenshot.png)
-
-## Database (Postgres in Docker)
-
-Postgres runs in Docker with a named volume (`taskdata`) so data survives container restarts. Inside Docker Compose, the app connects to Postgres using the hostname `db` (the service name), not `localhost` — this is configured automatically in `compose.yaml`.
-
-Persistence was verified by creating a task, running `docker compose down` (removes both containers), then `docker compose up` again — the task was still present, proving the volume preserved the data even though the containers were fully recreated.
-
-![Postgres tasks table via psql](db-postgres-screenshot.png)
-
-## Notes
-
-- All SQL queries use parameterized statements to prevent SQL injection.
-- Status codes follow REST conventions: `201` created, `200` success, `204` no content, `400` bad input, `401` unauthorized, `404` not found.
-- Passwords are never stored or hashed by this application — Supabase handles all of that.
-- Built stage by stage with a commit after every stage — see commit history for the full progression.
 
