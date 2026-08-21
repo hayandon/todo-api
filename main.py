@@ -6,23 +6,21 @@ from psycopg.rows import dict_row
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from supabase import create_client, Client
 
 load_dotenv()
 
 DATABASE_URL = os.environ["DATABASE_URL"]
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+print(f"Server starting, connected to Supabase project: {SUPABASE_URL}")
 
 def get_connection():
     conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
     return conn
 
-from supabase import create_client, Client
-
-SUPABASE_URL = os.environ["SUPABASE_URL"]
-SUPABASE_KEY = os.environ["SUPABASE_KEY"]
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-print(f"Server starting, connected to Supabase project: {SUPABASE_URL}")
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
@@ -64,6 +62,10 @@ class TaskCreate(BaseModel):
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     done: Optional[bool] = None
+
+class AuthCredentials(BaseModel):
+    email: Optional[str] = None
+    password: Optional[str] = None
 
 @app.get("/")
 def root():
@@ -161,3 +163,36 @@ def delete_task(task_id: int):
     conn.commit()
     conn.close()
     return
+
+@app.post("/auth/signup", status_code=201, summary="Create a new user account")
+def signup(credentials: AuthCredentials):
+    if not credentials.email or not credentials.password:
+        raise HTTPException(status_code=400, detail="email and password are required")
+
+    try:
+        result = supabase.auth.sign_up({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    return {"user": result.user}
+
+@app.post("/auth/login", summary="Authenticate and return a JWT")
+def login(credentials: AuthCredentials):
+    if not credentials.email or not credentials.password:
+        raise HTTPException(status_code=400, detail="email and password are required")
+
+    try:
+        result = supabase.auth.sign_in_with_password({
+            "email": credentials.email,
+            "password": credentials.password
+        })
+    except Exception as e:
+        raise HTTPException(status_code=401, detail="Invalid login credentials")
+
+    return {
+        "access_token": result.session.access_token,
+        "refresh_token": result.session.refresh_token
+    }
