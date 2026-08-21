@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from supabase import create_client, Client
+from fastapi import Header
 
 load_dotenv()
 
@@ -196,3 +197,17 @@ def login(credentials: AuthCredentials):
         "access_token": result.session.access_token,
         "refresh_token": result.session.refresh_token
     }
+@app.get("/public/info", summary="Public info, no auth required")
+def public_info():
+    return {"message": "Welcome stranger! This info is public."}
+
+@app.get("/protected/profile", summary="Protected route, requires a bearer token")
+def protected_profile(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    token = authorization.split(" ")[1] if len(authorization.split(" ")) > 1 else None
+    if not token:
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    return {"message": "This is a placeholder — token presence checked, not yet verified.", "token_received": token}    
