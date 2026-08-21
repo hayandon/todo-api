@@ -3,11 +3,10 @@ from typing import Optional
 from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Header, Depends
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from supabase import create_client, Client
-from fastapi import Header
 
 load_dotenv()
 
@@ -51,6 +50,24 @@ app = FastAPI()
 @app.exception_handler(HTTPException)
 def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+
+def get_current_user(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    token = authorization.split(" ")[1] if len(authorization.split(" ")) > 1 else None
+    if not token:
+        raise HTTPException(status_code=401, detail="Access token required")
+
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    if not user_response or not user_response.user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    return {"user": user_response.user, "token": token}
 
 class Task(BaseModel):
     id: int
@@ -197,31 +214,29 @@ def login(credentials: AuthCredentials):
         "access_token": result.session.access_token,
         "refresh_token": result.session.refresh_token
     }
+
+@app.post("/auth/logout", status_code=204, summary="Log out the current user")
+def logout(current_user: dict = Depends(get_current_user)):
+    try:
+        supabase.auth.sign_out()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return
+
 @app.get("/public/info", summary="Public info, no auth required")
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
 @app.get("/protected/profile", summary="Protected route, requires a valid bearer token")
-def protected_profile(authorization: Optional[str] = Header(None)):
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Access token required")
-
-    token = authorization.split(" ")[1] if len(authorization.split(" ")) > 1 else None
-    if not token:
-        raise HTTPException(status_code=401, detail="Access token required")
-
-    try:
-        user_response = supabase.auth.get_user(token)
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    if not user_response or not user_response.user:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    user = user_response.user
+def protected_profile(current_user: dict = Depends(get_current_user)):
+    user = current_user["user"]
     return {
         "id": user.id,
         "email": user.email,
         "created_at": user.created_at
     }
-    
+
+@app.get("/protected/dashboard", summary="Another protected route, reusing the same guard")
+def protected_dashboard(current_user: dict = Depends(get_current_user)):
+    user = current_user["user"]
+    return {"message": f"Welcome to your dashboard, {user.email}!"}
