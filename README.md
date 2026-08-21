@@ -108,3 +108,39 @@ curl -i http://localhost:8000/tasks
 This project now uses Postgres instead of SQLite. Start it with:
 
 This runs Postgres 16 in a container named `taskdb`, with a named volume (`taskdata`) so data survives container restarts.
+## Running with Docker (Postgres)
+
+This project now runs Postgres in Docker, with the app itself also containerized. Everything starts with one command.
+
+### Quick start
+
+This builds the API image, starts Postgres, and connects them over Docker's internal network. On first run, the app creates the `tasks` table and seeds 3 example tasks.
+
+Visit `http://localhost:8000/docs` for Swagger UI, same as before.
+
+### Environment variables
+
+Copy `.env.example` to `.env` and adjust if needed:
+
+Note: inside Docker Compose, the app uses `db` as the host (the service name), not `localhost` — this is set automatically in `compose.yaml`.
+
+### Architecture
+
+- `api` service — the FastAPI app, built from the local `Dockerfile`
+- `db` service — Postgres 16, with a named volume (`taskdata`) so data survives container restarts
+- The two containers communicate over Docker's internal network; only the API port (`8000`) is exposed to your machine
+
+### Proving persistence
+
+Created a task, ran `docker compose down` (removes both containers), then `docker compose up` again. The task was still present in `GET /tasks` afterward — proof the named volume preserved the data even though the containers themselves were fully recreated.
+
+### Running without Docker (local dev)
+
+1. Start Postgres manually: `docker run --name taskdb -e POSTGRES_PASSWORD=dev -e POSTGRES_DB=tasks -p 5432:5432 -v taskdata:/var/lib/postgresql/data -d postgres:16`
+2. Create a venv and install: `pip install -r requirements.txt`
+3. Copy `.env.example` to `.env`
+4. Run: `uvicorn main:app --reload`
+
+## Database screenshot
+
+![Postgres tasks table via psql](db-postgres-screenshot.png)

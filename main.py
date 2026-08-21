@@ -15,6 +15,14 @@ def get_connection():
     conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
     return conn
 
+from supabase import create_client, Client
+
+SUPABASE_URL = os.environ["SUPABASE_URL"]
+SUPABASE_KEY = os.environ["SUPABASE_KEY"]
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+print(f"Server starting, connected to Supabase project: {SUPABASE_URL}")
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
