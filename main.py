@@ -3,8 +3,9 @@ from typing import Optional
 from dotenv import load_dotenv
 import psycopg
 from psycopg.rows import dict_row
-from fastapi import FastAPI, HTTPException, Request, Header, Depends
 from fastapi.responses import JSONResponse
+from fastapi import FastAPI, HTTPException, Request, Header, Depends, Security
+from fastapi.security import HTTPBearer
 from pydantic import BaseModel
 from supabase import create_client, Client
 
@@ -46,12 +47,16 @@ def init_db():
 init_db()
 
 app = FastAPI()
+security_scheme = HTTPBearer()
 
 @app.exception_handler(HTTPException)
 def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
 
-def get_current_user(authorization: Optional[str] = Header(None)):
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    _: str = Security(security_scheme)
+):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Access token required")
 

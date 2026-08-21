@@ -144,3 +144,35 @@ Created a task, ran `docker compose down` (removes both containers), then `docke
 ## Database screenshot
 
 ![Postgres tasks table via psql](db-postgres-screenshot.png)
+## Authentication (Supabase)
+
+This API now includes user authentication via Supabase Auth. Supabase handles password hashing and JWT signing — this server only ever receives and verifies tokens, never handling raw passwords itself.
+
+### Setup
+
+1. Create a free project at [supabase.com](https://supabase.com)
+2. In Project Settings → API, copy your Project URL and anon/publishable key
+3. In Authentication → Providers → Email, turn off "Confirm email" (for local testing only)
+4. Copy `.env.example` to `.env` and fill in your values:
+
+Or locally without Docker:
+
+### API Reference
+
+| Method | Endpoint                | Auth required           | Purpose                          |
+|--------|--------------------------|--------------------------|-----------------------------------|
+| POST   | `/auth/signup`           | None                     | Create a new user account         |
+| POST   | `/auth/login`            | None                     | Authenticate, returns a JWT       |
+| POST   | `/auth/logout`           | `Authorization: Bearer`  | End the current session           |
+| GET    | `/public/info`           | None                     | Public, open data                 |
+| GET    | `/protected/profile`     | `Authorization: Bearer`  | Get the logged-in user's profile  |
+| GET    | `/protected/dashboard`   | `Authorization: Bearer`  | Another protected route (demonstrates guard reuse) |
+
+Tasks endpoints (`/tasks`, etc.) from earlier assignments remain unauthenticated.
+
+### Swagger UI
+
+Visit `/docs` — protected routes show a padlock icon. Click **Authorize**, paste a JWT from `/auth/login`, and test any protected route directly from the browser.
+
+![Swagger UI with bearer auth](swagger-auth-screenshot.png)
+
