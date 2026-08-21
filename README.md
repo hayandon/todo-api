@@ -1,12 +1,5 @@
 # Task API
 
-A simple in-memory CRUD API for managing tasks, built with FastAPI as part of a backend development internship assignment.
-
-## What this is
-
-This API lets you create, read, update, and delete tasks. Data is stored in memory only — it resets every time the server restarts. There's no database yet; that's a deliberate first step before adding persistence.
-# Task API
-
 A CRUD API for managing tasks, built with FastAPI and backed by a SQLite database. Originally built with in-memory storage; now persists data to disk so tasks survive a server restart.
 
 ## Why SQLite
@@ -188,30 +181,7 @@ Visit `/docs` — protected routes show a padlock icon. Click **Authorize**, pas
 
 This API uses Supabase Auth for user accounts. Supabase handles password hashing and JWT signing — this server only ever receives and verifies tokens, never handling raw passwords itself.
 
-### Setup
 
-1. Create a free project at [supabase.com](https://supabase.com)
-2. In Project Settings → API, copy your Project URL and anon/publishable key
-3. In Authentication → Providers → Email, turn off "Confirm email" (for local testing only)
-4. Fill these into `.env`:
-
-## API Reference
-
-| Method | Endpoint                | Auth required           | Purpose                          |
-|--------|--------------------------|--------------------------|-----------------------------------|
-| GET    | `/`                       | None                     | API info                          |
-| GET    | `/health`                 | None                     | Health check                      |
-| GET    | `/tasks`                  | None                     | List all tasks                    |
-| GET    | `/tasks/{id}`              | None                     | Get a single task                 |
-| POST   | `/tasks`                  | None                     | Create a new task                 |
-| PUT    | `/tasks/{id}`              | None                     | Update a task                     |
-| DELETE | `/tasks/{id}`              | None                     | Delete a task                     |
-| POST   | `/auth/signup`             | None                     | Create a new user account         |
-| POST   | `/auth/login`              | None                     | Authenticate, returns a JWT       |
-| POST   | `/auth/logout`             | `Authorization: Bearer`  | End the current session           |
-| GET    | `/public/info`             | None                     | Public, open data                 |
-| GET    | `/protected/profile`       | `Authorization: Bearer`  | Get the logged-in user's profile  |
-| GET    | `/protected/dashboard`     | `Authorization: Bearer`  | Another protected route (demonstrates guard reuse) |
 
 ## Swagger UI
 
