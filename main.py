@@ -201,7 +201,7 @@ def login(credentials: AuthCredentials):
 def public_info():
     return {"message": "Welcome stranger! This info is public."}
 
-@app.get("/protected/profile", summary="Protected route, requires a bearer token")
+@app.get("/protected/profile", summary="Protected route, requires a valid bearer token")
 def protected_profile(authorization: Optional[str] = Header(None)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Access token required")
@@ -210,4 +210,18 @@ def protected_profile(authorization: Optional[str] = Header(None)):
     if not token:
         raise HTTPException(status_code=401, detail="Access token required")
 
-    return {"message": "This is a placeholder — token presence checked, not yet verified.", "token_received": token}    
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    if not user_response or not user_response.user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    user = user_response.user
+    return {
+        "id": user.id,
+        "email": user.email,
+        "created_at": user.created_at
+    }
+    
